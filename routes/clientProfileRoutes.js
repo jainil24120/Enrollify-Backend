@@ -5,6 +5,8 @@ import {
 } from "../controllers/clientProfileCon.js";
 
 import { protect } from "../middleware/authMiddleware.js";
+import { checkClientProfileComplete } from "../middleware/checkClientProfileComplete.js";
+import { createProfileAndOrder, verifySubscriptionPayment } from "../controllers/subscriptionOrder.js";
 import Webinar from "../models/webinar.js";
 
 const router = express.Router();
@@ -12,6 +14,10 @@ const router = express.Router();
 // CLIENT PROFILE
 router.post("/", protect, createClientProfile);
 router.get("/me", protect, getMyClientProfile);
+
+// Payment routes (also available via /api/subscriptions/)
+router.post("/create-order", protect, checkClientProfileComplete, createProfileAndOrder);
+router.post("/verify", protect, checkClientProfileComplete, verifySubscriptionPayment);
 
 // PUBLIC WEBINARS (subdomain based)
 router.get("/webinars", async (req, res) => {

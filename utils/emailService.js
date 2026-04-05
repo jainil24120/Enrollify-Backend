@@ -2,6 +2,8 @@ import axios from "axios";
 
 export const sendEmail = async ({ to, subject, text, html }) => {
   try {
+    console.log(`[EMAIL] Sending to: ${to} | Subject: ${subject}`);
+
     const response = await axios.post(
       "https://api.brevo.com/v3/smtp/email",
       {
@@ -21,10 +23,10 @@ export const sendEmail = async ({ to, subject, text, html }) => {
       }
     );
 
-    console.log("Email sent:", response.data?.messageId || "success");
+    console.log(`[EMAIL] Sent successfully: ${response.data?.messageId}`);
     return response.data;
   } catch (error) {
-    console.error("EMAIL ERROR:", error.response?.data || error.message);
+    console.error(`[EMAIL] FAILED to: ${to} | Error:`, error.response?.data || error.message);
     return null;
   }
 };
