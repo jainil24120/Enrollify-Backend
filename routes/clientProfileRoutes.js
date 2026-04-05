@@ -16,8 +16,8 @@ router.post("/", protect, createClientProfile);
 router.get("/me", protect, getMyClientProfile);
 
 // Payment routes (also available via /api/subscriptions/)
-router.post("/create-order", protect, checkClientProfileComplete, createProfileAndOrder);
-router.post("/verify", protect, checkClientProfileComplete, verifySubscriptionPayment);
+router.post("/create-order", protect, createProfileAndOrder);
+router.post("/verify", protect, verifySubscriptionPayment);
 
 // PUBLIC WEBINARS (subdomain based)
 router.get("/webinars", async (req, res) => {

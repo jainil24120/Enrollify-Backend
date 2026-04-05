@@ -20,8 +20,8 @@ router.post("/", protect, isAdmin, createSubscription);
 router.get("/", getAllSubscriptions);
 
 // ✅ SUBSCRIPTION WITH PROFILE CHECK - User must have complete profile to subscribe
-router.post("/create-order", protect, checkClientProfileComplete, createProfileAndOrder);
-router.post("/verify", protect, checkClientProfileComplete, verifySubscriptionPayment);
+router.post("/create-order", protect, createProfileAndOrder);
+router.post("/verify", protect, verifySubscriptionPayment);
 router.put("/:id", protect, isAdmin, updateSubscription);
 
 export default router;
