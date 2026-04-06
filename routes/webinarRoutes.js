@@ -11,6 +11,8 @@ import { checkWebinarAccess } from "../middleware/checkWebinarAccess.js";
 import { checkClientProfileComplete } from "../middleware/checkClientProfileComplete.js";
 import { paidOnly } from "../middleware/subplan.js";
 import { upload } from "../middleware/upload.js";
+import Webinar from "../models/webinar.js";
+import Registration from "../models/registration.js";
 
 const router = express.Router();
 
@@ -34,7 +36,24 @@ router.get(
     });
   }
 );
-// Public routes
+
+// PUBLIC: Get webinar by slug (for template page)
+router.get("/s/:slug", async (req, res) => {
+  try {
+    const webinar = await Webinar.findOne({ slug: req.params.slug })
+      .populate("createdBy", "firstname lastname email")
+      .populate("clients", "Organization_Name subdomain");
+    if (!webinar) return res.status(404).json({ msg: "Webinar not found" });
+
+    // Get registration count
+    const registrationCount = await Registration.countDocuments({ webinar: webinar._id });
+
+    res.json({ ...webinar.toObject(), registrationCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.patch(
   "/:webinarId/reschedule",
   protect,
@@ -44,5 +63,4 @@ router.get("/", protect, getAllWebinar);
 router.put("/:webinarId", protect, upload.single("bannerImage"), editWebinar);
 router.get("/:id", getWebinarById);
 
-// module.exports = router;
-export default router
+export default router;

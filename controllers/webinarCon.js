@@ -17,17 +17,32 @@ export const createWebinar = async (req, res) => {
     const {
       title,
       subtitle,
+      slug,
       description,
       categories,
       webinarDateTime,
       durationMinutes,
       price,
+      originalPrice,
+      registrationDeadline,
       clients,
       language,
       maxSeats,
       bannerImage,
       meetingLink,
       status,
+      speakerName,
+      speakerBio,
+      speakerImage,
+      speakerSocials,
+      learningOutcomes,
+      targetAudience,
+      faqs,
+      agenda,
+      testimonials,
+      ctaText,
+      bonusText,
+      trustLogos,
     } = req.body;
 
     let parsedBannerImage = bannerImage || "";
@@ -158,25 +173,47 @@ export const createWebinar = async (req, res) => {
         msg: "Meeting link required for paid live webinar",
       });
     }
+    // Parse JSON strings if sent from form data
+    const parseJSON = (val) => {
+      if (!val) return undefined;
+      if (typeof val === "string") try { return JSON.parse(val); } catch { return val; }
+      return val;
+    };
+
     // ✅ CREATE WEBINAR
     const webinar = await Webinar.create({
       title,
       subtitle,
+      slug: slug || undefined, // auto-generated if not provided
       description,
-      categories,
+      categories: parseJSON(categories),
       webinarDateTime: webinarDate,
       durationMinutes,
       price,
-      clients: clients || clientProfile._id, // ✅ Auto-assign to the creating client
+      originalPrice,
+      registrationDeadline: registrationDeadline ? new Date(registrationDeadline) : undefined,
+      clients: clients || clientProfile._id,
       language,
       maxSeats,
       bannerImage: parsedBannerImage,
       meetingLink,
       status: webinarStatus,
       createdBy: req.user.id,
+      speakerName,
+      speakerBio,
+      speakerImage,
+      speakerSocials: parseJSON(speakerSocials),
+      learningOutcomes: parseJSON(learningOutcomes),
+      targetAudience: parseJSON(targetAudience),
+      faqs: parseJSON(faqs),
+      agenda: parseJSON(agenda),
+      testimonials: parseJSON(testimonials),
+      ctaText,
+      bonusText,
+      trustLogos: parseJSON(trustLogos),
     });
 
-    const webinarLink = `https://${clientProfile.subdomain}.enrollify.com/webinar/${webinar._id}`;
+    const webinarLink = `https://enrollify.xyz/w/${webinar.slug}`;
 
     //SEND EMAIL (Safe Wrapper)
     try {
@@ -223,6 +260,7 @@ export const createWebinar = async (req, res) => {
     res.status(201).json({
       msg: "Webinar created successfully",
       webinar: populatedWebinar,
+      webinarUrl: `https://enrollify.xyz/w/${webinar.slug}`,
     });
 
   } catch (error) {
@@ -293,16 +331,31 @@ export const editWebinar = async (req, res) => {
     const allowedUpdates = [
       "title",
       "subtitle",
+      "slug",
       "description",
       "categories",
       "webinarDateTime",
       "durationMinutes",
       "price",
+      "originalPrice",
+      "registrationDeadline",
       "language",
       "maxSeats",
       "bannerImage",
       "meetingLink",
       "status",
+      "speakerName",
+      "speakerBio",
+      "speakerImage",
+      "speakerSocials",
+      "learningOutcomes",
+      "targetAudience",
+      "faqs",
+      "agenda",
+      "testimonials",
+      "ctaText",
+      "bonusText",
+      "trustLogos",
     ];
 
     const updates = {};
