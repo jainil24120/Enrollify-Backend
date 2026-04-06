@@ -30,8 +30,8 @@ export const getWebinarStats = async (req, res) => {
         ]);
 
         return {
+          ...webinar.toObject(),
           webinarId: webinar._id,
-          title: webinar.title,
           enrollments,
           revenue: revenue[0]?.total || 0
         };
