@@ -43,6 +43,7 @@ export const createWebinar = async (req, res) => {
       ctaText,
       bonusText,
       trustLogos,
+      templateId,
     } = req.body;
 
     let parsedBannerImage = bannerImage || "";
@@ -211,6 +212,7 @@ export const createWebinar = async (req, res) => {
       ctaText,
       bonusText,
       trustLogos: parseJSON(trustLogos),
+      template: templateId || null,
     });
 
     const webinarLink = `https://enrollify.xyz/w/${webinar.slug}`;
@@ -356,6 +358,7 @@ export const editWebinar = async (req, res) => {
       "ctaText",
       "bonusText",
       "trustLogos",
+      "template",
     ];
 
     const updates = {};

@@ -15,6 +15,7 @@ export const createProfileAndOrder = async (req, res) => {
       first_name,
       last_name,
       Organization_Name,
+      subdomain: requestedSubdomain,
       phone,
       bankDetails,
       upiId,
@@ -34,7 +35,28 @@ export const createProfileAndOrder = async (req, res) => {
       });
     }
 
-    const subdomain = generateSubdomain(Organization_Name);
+    // Subdomain logic: use client-provided subdomain, or fall back to existing/generated
+    const existing = await ClientProfile.findOne({ user: req.user.id });
+
+    let subdomain;
+    if (requestedSubdomain) {
+      subdomain = requestedSubdomain.toLowerCase().replace(/[^a-z0-9-]/g, "");
+    } else if (existing) {
+      subdomain = existing.subdomain;
+    } else {
+      subdomain = generateSubdomain(Organization_Name);
+    }
+
+    // Check if subdomain is taken by a different active user
+    const taken = await ClientProfile.findOne({ subdomain, user: { $ne: req.user.id } });
+    if (taken) {
+      const isExpired = taken.subscriptionValidTill && new Date(taken.subscriptionValidTill) < new Date();
+      if (!isExpired) {
+        return res.status(400).json({ msg: "Subdomain is already taken. Please choose another." });
+      }
+      // Expired user — free up by removing their subdomain
+      await ClientProfile.findByIdAndUpdate(taken._id, { $set: { subdomain: taken.subdomain + "-expired-" + Date.now() } });
+    }
 
     // ✅ Save profile first
     const profile = await ClientProfile.findOneAndUpdate(

@@ -16,6 +16,38 @@ const router = express.Router();
 router.post("/", protect, createClientProfile);
 router.get("/me", protect, getMyClientProfile);
 
+// CHECK SUBDOMAIN AVAILABILITY
+router.get("/check-subdomain", protect, async (req, res) => {
+  try {
+    const subdomain = (req.query.subdomain || "").toLowerCase().replace(/[^a-z0-9-]/g, "");
+    if (subdomain.length < 3) {
+      return res.json({ available: false, reason: "Too short" });
+    }
+
+    const existing = await ClientProfile.findOne({ subdomain });
+
+    // No one has it — available
+    if (!existing) {
+      return res.json({ available: true });
+    }
+
+    // Same user already owns it — available (reuse)
+    if (existing.user.toString() === req.user.id) {
+      return res.json({ available: true, reason: "You already own this subdomain" });
+    }
+
+    // Different user — check if their subscription expired
+    if (existing.subscriptionValidTill && new Date(existing.subscriptionValidTill) < new Date()) {
+      return res.json({ available: true, reason: "Previous owner's subscription expired" });
+    }
+
+    // Taken by active user
+    return res.json({ available: false, reason: "Already taken by an active user" });
+  } catch (err) {
+    res.status(500).json({ available: false, error: err.message });
+  }
+});
+
 // Payment routes (also available via /api/subscriptions/)
 router.post("/create-order", protect, createProfileAndOrder);
 router.post("/verify", protect, verifySubscriptionPayment);

@@ -18,6 +18,7 @@ import adminRoutes from "./routes/adminRoutes.js";
 import passwordRoutes from "./routes/passwordRoutes.js";
 import enrollRoutes from "./routes/enrollRoutes.js";
 import clientDashboardRoutes from "./routes/clientDashboardRoutes.js";
+import templateRoutes from "./routes/templateRoutes.js";
 import "./utils/cronjobs.js";
 import { initSocket } from "./utils/socket.js";
 
@@ -52,6 +53,7 @@ app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/password", passwordRoutes);
 app.use("/api/payment", enrollRoutes);
+app.use("/api/templates", templateRoutes);
 
 mongoose
   .connect(process.env.MONGO_URL)

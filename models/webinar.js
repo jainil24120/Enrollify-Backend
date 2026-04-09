@@ -186,6 +186,12 @@ const webinarSchema = new mongoose.Schema(
       default: [],
     },
 
+    template: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Template",
+      default: null,
+    },
+
     paymentId: {
       type: String,
     },

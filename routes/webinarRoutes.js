@@ -42,7 +42,8 @@ router.get("/s/:slug", async (req, res) => {
   try {
     const webinar = await Webinar.findOne({ slug: req.params.slug })
       .populate("createdBy", "firstname lastname email")
-      .populate("clients", "Organization_Name subdomain");
+      .populate("clients", "Organization_Name subdomain")
+      .populate("template", "key name customizable");
     if (!webinar) return res.status(404).json({ msg: "Webinar not found" });
 
     // Get registration count

@@ -104,6 +104,12 @@ const subscriptionSchema = new mongoose.Schema(
         type: Number, // 8 / 5 / 2 (%)
         default: 0,
       },
+
+      templateTier: {
+        type: String,
+        enum: ["basic", "growth", "elite"],
+        default: "basic",
+      },
     },
 
     limits: {
