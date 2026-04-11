@@ -206,7 +206,7 @@ const webinarSchema = new mongoose.Schema(
 );
 
 // Auto-generate slug from title before saving
-webinarSchema.pre("save", async function (next) {
+webinarSchema.pre("save", async function () {
   if (!this.slug || this.isModified("title")) {
     let baseSlug = this.title
       .toLowerCase()
@@ -224,7 +224,6 @@ webinarSchema.pre("save", async function (next) {
     }
     this.slug = slug;
   }
-  next();
 });
 
 const Webinar = mongoose.model("Webinar", webinarSchema);

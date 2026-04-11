@@ -25,12 +25,28 @@ export const getAllWebinars = async (req, res) => {
     try {
         const webinars = await Webinar.find()
             .populate("createdBy", "firstname lastname email")
-            .populate("clients", "Organization_Name");
+            .populate("clients", "Organization_Name")
+            .lean();
+
+        const enriched = await Promise.all(
+            webinars.map(async (w) => {
+                const registrations = await Registration.countDocuments({ webinar: w._id });
+                const revenueAgg = await Registration.aggregate([
+                    { $match: { webinar: w._id, paymentStatus: "paid" } },
+                    { $group: { _id: null, total: { $sum: "$amountPaid" } } }
+                ]);
+                return {
+                    ...w,
+                    registrationsCount: registrations,
+                    revenue: revenueAgg[0]?.total || 0,
+                };
+            })
+        );
 
         res.json({
             success: true,
-            count: webinars.length,
-            data: webinars
+            count: enriched.length,
+            data: enriched
         })
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
@@ -101,6 +117,8 @@ export const getAdminUsers = async (req, res) => {
 
         return {
           id: creator._id,
+          firstname: creator.user?.firstname || "",
+          lastname: creator.user?.lastname || "",
 
           userInfo: {
             name: `${creator.user?.firstname || ""} ${creator.user?.lastname || ""}`,
@@ -109,6 +127,9 @@ export const getAdminUsers = async (req, res) => {
           },
 
           plan: creator.subscription?.name || "Free",
+          subdomain: creator.subdomain || "",
+          organization: creator.Organization_Name || "",
+          phone: creator.phone || "",
 
           joinedDate: creator.user?.createdAt,
 

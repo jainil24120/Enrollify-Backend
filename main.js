@@ -19,8 +19,10 @@ import passwordRoutes from "./routes/passwordRoutes.js";
 import enrollRoutes from "./routes/enrollRoutes.js";
 import clientDashboardRoutes from "./routes/clientDashboardRoutes.js";
 import templateRoutes from "./routes/templateRoutes.js";
+import whatsappRoutes from "./routes/whatsappRoutes.js";
 import "./utils/cronjobs.js";
 import { initSocket } from "./utils/socket.js";
+import { restoreSessions } from "./services/whatsappService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,7 +38,8 @@ app.use(cors({
   origin: "*",
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use("/upload", express.static(path.join(__dirname, "upload")));
 
 app.get("/", (req, res) => {
@@ -54,10 +57,15 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/password", passwordRoutes);
 app.use("/api/payment", enrollRoutes);
 app.use("/api/templates", templateRoutes);
+app.use("/api/whatsapp", whatsappRoutes);
 
 mongoose
   .connect(process.env.MONGO_URL)
-  .then(() => console.log("MongoDB Atlas Connected"))
+  .then(() => {
+    console.log("MongoDB Atlas Connected");
+    // Restore any previously connected WhatsApp sessions
+    restoreSessions().catch((err) => console.error("WA restore error:", err.message));
+  })
   .catch((err) => console.error("Mongo Error:", err));
 
 server.listen(port, () => {

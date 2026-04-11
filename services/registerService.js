@@ -2,8 +2,10 @@ import dayjs from "dayjs";
 import Message from "../models/message.js";
 import Registration from "../models/registration.js";
 import ClientProfile from "../models/clientProfile.js";
+import WhatsappSession from "../models/whatsappSession.js";
 import { sendEmail } from "../utils/emailService.js";
 import { getIO } from "../utils/socket.js";
+import * as whatsappService from "./whatsappService.js";
 
 export const registerUserToWebinar = async ({ guestData, webinar, razorpay_payment_id, razorpay_order_id }) => {
 
@@ -65,6 +67,25 @@ export const registerUserToWebinar = async ({ guestData, webinar, razorpay_payme
     `
   });
 
+  // 💬 WhatsApp seat confirmation (if client has WhatsApp connected)
+  try {
+    const waSession = await WhatsappSession.findOne({
+      clientId: clientProfile._id,
+      status: "connected",
+    });
+    if (waSession && guestData.phone) {
+      const waMsg = `Hi ${guestData.firstname || "there"}! Your seat is confirmed for *${webinar.title}*\n\nDate: ${new Date(webinar.webinarDateTime).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}\n${webinar.meetingLink ? `Join: ${webinar.meetingLink}` : ""}\n\nSee you there!`;
+      await whatsappService.sendMessage(clientProfile._id.toString(), guestData.phone, waMsg);
+    }
+  } catch (waErr) {
+    // WhatsApp failure should never break registration
+    console.error("WA confirmation error:", waErr.message);
+  }
+
+  // Determine channels based on WhatsApp availability
+  const hasWA = await WhatsappSession.findOne({ clientId: clientProfile._id, status: "connected" }).lean();
+  const channels = hasWA && guestData.phone ? ["email", "whatsapp"] : ["email"];
+
   // ⏰ Reminder messages
   const messages = [
     {
@@ -100,7 +121,8 @@ export const registerUserToWebinar = async ({ guestData, webinar, razorpay_payme
       webinar: webinar._id,
       user: guestData.user || null,
       email: guestData.email.toLowerCase(),
-      channels: ["email"],
+      phone: guestData.phone || "",
+      channels,
       ...msg,
     }))
   );

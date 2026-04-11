@@ -16,6 +16,25 @@ const router = express.Router();
 router.post("/", protect, createClientProfile);
 router.get("/me", protect, getMyClientProfile);
 
+// UPDATE CLIENT PROFILE
+router.put("/me", protect, async (req, res) => {
+  try {
+    const profile = await ClientProfile.findOne({ user: req.user._id });
+    if (!profile) return res.status(404).json({ message: "Profile not found" });
+
+    const allowed = ["first_name", "last_name", "Organization_Name", "phone", "gstNumber", "bio", "upiId", "bankDetails", "subdomain"];
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) {
+        profile[key] = req.body[key];
+      }
+    }
+    await profile.save();
+    res.json({ success: true, message: "Profile updated", profile });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // CHECK SUBDOMAIN AVAILABILITY
 router.get("/check-subdomain", protect, async (req, res) => {
   try {

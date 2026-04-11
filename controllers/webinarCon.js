@@ -47,9 +47,14 @@ export const createWebinar = async (req, res) => {
     } = req.body;
 
     let parsedBannerImage = bannerImage || "";
+    // Support multer file upload (FormData) as fallback
     if (req.file) {
-      parsedBannerImage = `/upload/${req.file.filename}`;
+      const fs = await import("fs");
+      const base64 = fs.readFileSync(req.file.path).toString("base64");
+      parsedBannerImage = `data:${req.file.mimetype};base64,${base64}`;
+      fs.unlinkSync(req.file.path);
     }
+    // bannerImage is already base64 if sent via JSON from frontend
 
     // ✅ Basic Validation
     if (
@@ -361,18 +366,54 @@ export const editWebinar = async (req, res) => {
       "template",
     ];
 
+    const parseJSON = (val) => {
+      if (!val) return undefined;
+      if (typeof val === "string") try { return JSON.parse(val); } catch { return val; }
+      return val;
+    };
+
+    // Strip _id from subdocument arrays so Mongoose doesn't choke on stale ObjectIds
+    const stripIds = (arr) => {
+      if (!Array.isArray(arr)) return arr;
+      return arr.map((item) => {
+        if (typeof item === "object" && item !== null) {
+          const { _id, ...rest } = item;
+          return rest;
+        }
+        return item;
+      });
+    };
+
+    const jsonFields = [
+      "categories", "speakerSocials", "learningOutcomes", "targetAudience",
+      "faqs", "agenda", "testimonials", "trustLogos",
+    ];
+
+    // Subdocument arrays whose items may contain stale _id fields
+    const subdocArrayFields = ["faqs", "agenda", "testimonials"];
+
     const updates = {};
     Object.keys(req.body).forEach((key) => {
       if (allowedUpdates.includes(key)) {
-        updates[key] = req.body[key];
+        let val = jsonFields.includes(key) ? parseJSON(req.body[key]) : req.body[key];
+        if (subdocArrayFields.includes(key)) val = stripIds(val);
+        updates[key] = val;
       }
     });
 
-    if (req.file) {
-      updates.bannerImage = `/upload/${req.file.filename}`;
+    // Frontend sends templateId, map it to the template field
+    if (req.body.templateId) {
+      updates.template = req.body.templateId;
     }
 
-    // ✅ Date validation (if updating date)
+    if (req.file) {
+      const fs = await import("fs");
+      const base64 = fs.readFileSync(req.file.path).toString("base64");
+      updates.bannerImage = `data:${req.file.mimetype};base64,${base64}`;
+      fs.unlinkSync(req.file.path);
+    }
+
+    // ✅ Date validation (only if user is changing the date to a new value)
     if (updates.webinarDateTime) {
       const updatedDate = new Date(updates.webinarDateTime);
 
@@ -382,7 +423,10 @@ export const editWebinar = async (req, res) => {
         });
       }
 
-      if (updatedDate < new Date()) {
+      // Only block past dates if the date is actually being changed
+      const existingDate = webinar.webinarDateTime ? new Date(webinar.webinarDateTime).getTime() : null;
+      const newDate = updatedDate.getTime();
+      if (newDate !== existingDate && updatedDate < new Date()) {
         return res.status(400).json({
           msg: "Webinar date cannot be in the past",
         });

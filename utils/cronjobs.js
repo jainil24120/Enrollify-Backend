@@ -3,6 +3,7 @@ import Message from "../models/message.js";
 import ClientProfile from "../models/clientProfile.js";
 import Webinar from "../models/webinar.js";
 import { sendEmail } from "./emailService.js";
+import * as whatsappService from "../services/whatsappService.js";
 
 // ==================== WEBINAR AUTO-STATUS UPDATE (every minute) ====================
 cron.schedule("* * * * *", async () => {
@@ -86,26 +87,59 @@ cron.schedule("*/2 * * * *", async () => {
 
     await Promise.all(
       pendingMessages.map(async (msg) => {
+        let emailOk = true;
+        let waOk = true;
+
         try {
+          // Send email if channel includes email
           if (msg.channels && msg.channels.includes("email")) {
-            await sendEmail({
-              to: msg.email || (msg.user && msg.user.email),
-              subject: msg.subject,
-              html: msg.body,
-            });
+            const toEmail = msg.email || (msg.user && msg.user.email);
+            if (toEmail) {
+              try {
+                await sendEmail({ to: toEmail, subject: msg.subject, html: msg.body });
+              } catch (emailErr) {
+                console.error("Email send error in cron:", emailErr.message);
+                emailOk = false;
+              }
+            }
           }
 
-          msg.status = "sent";
-          msg.sentAt = now;
-          await msg.save();
+          // Send WhatsApp message if channel includes whatsapp
+          if (msg.channels && msg.channels.includes("whatsapp") && msg.phone && msg.webinar) {
+            try {
+              const webinar = await Webinar.findById(msg.webinar);
+              if (webinar && webinar.clients) {
+                const clientId = webinar.clients.toString();
+                const result = await whatsappService.sendMessage(clientId, msg.phone, msg.body);
+                if (!result.success) {
+                  console.error("WhatsApp send failed:", result.error);
+                  waOk = false;
+                }
+              } else {
+                waOk = false;
+              }
+            } catch (waErr) {
+              console.error("WhatsApp send error in cron:", waErr.message);
+              waOk = false;
+            }
+          }
 
-          console.log("✅ Message sent:", msg.type);
+          // Determine final status
+          if (emailOk && waOk) {
+            msg.status = "sent";
+            msg.sentAt = now;
+            console.log("✅ Message sent:", msg.type);
+          } else {
+            msg.status = "failed";
+            msg.error = !emailOk ? "Email failed" : "WhatsApp failed";
+            console.log("❌ Message partially failed:", msg.type);
+          }
+          await msg.save();
 
         } catch (err) {
           msg.status = "failed";
           msg.error = err.message;
           await msg.save();
-
           console.log("❌ Message failed:", err.message);
         }
       })

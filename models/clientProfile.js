@@ -51,6 +51,12 @@ const clientProfileSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
+
+        bio: {
+            type: String,
+            trim: true,
+            default: "",
+        },
         subscription: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Subscription",

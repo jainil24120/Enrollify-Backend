@@ -24,7 +24,9 @@ const messageSchema = new mongoose.Schema(
         "webinar_link",
         "webinar_started",
         "subscription_reminder",
-        "subscription_expired"
+        "subscription_expired",
+        "broadcast",
+        "scheduled_custom"
       ],
       required: true,
     },
