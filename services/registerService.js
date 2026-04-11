@@ -44,26 +44,90 @@ export const registerUserToWebinar = async ({ guestData, webinar, razorpay_payme
     razorpayOrderId: razorpay_order_id
   });
 
-  const webinarLink = `https://${clientProfile.subdomain}.enrollify.com/webinar/${webinar._id}`;
+  const webinarPageLink = `https://enrollify.xyz/w/${webinar.slug}`;
+  const webinarDate = new Date(webinar.webinarDateTime).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "full", timeStyle: "short" });
+  const isPaid = webinar.price > 0;
+  const orgName = clientProfile.Organization_Name || "the host";
 
-  // 📧 Email send
   await sendEmail({
     to: guestData.email.toLowerCase(),
-    subject: "🎉 Webinar Registration Confirmed",
+    subject: `Registration Confirmed — ${webinar.title}`,
     html: `
-      <h2>You are successfully registered!</h2>
-      <p><strong>Topic:</strong> ${webinar.title}</p>
-      <p><strong>Date & Time:</strong> ${new Date(webinar.webinarDateTime).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p>
-      <p>
-        <strong>Webinar Dashboard:</strong><br/>
-        <a href="${webinarLink}">${webinarLink}</a>
-      </p>
-      ${webinar.meetingLink ? `
-      <p>
-        <strong>Live Meeting Link:</strong><br/>
-        <a href="${webinar.meetingLink}">Click here to join the live meeting</a>
-      </p>
-      ` : ""}
+      <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+
+        <div style="background: linear-gradient(135deg, #6574e9, #4f5cd4); padding: 32px 28px; text-align: center;">
+          <h1 style="color: #ffffff; font-size: 22px; margin: 0 0 6px 0;">Registration Confirmed</h1>
+          <p style="color: rgba(255,255,255,0.85); font-size: 14px; margin: 0;">Your seat has been reserved</p>
+        </div>
+
+        <div style="padding: 28px;">
+          <p style="font-size: 15px; color: #374151; margin: 0 0 20px 0;">
+            Hi <strong>${guestData.firstname || "there"}</strong>,<br/>
+            You have successfully registered for the following webinar hosted by <strong>${orgName}</strong>.
+          </p>
+
+          <div style="background: #f8f9fb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+            <h2 style="font-size: 18px; color: #1a1a35; margin: 0 0 12px 0;">${webinar.title}</h2>
+            ${webinar.subtitle ? `<p style="font-size: 13px; color: #6b7280; margin: 0 0 14px 0;">${webinar.subtitle}</p>` : ""}
+
+            <table style="width: 100%; font-size: 14px; color: #374151; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 6px 0; font-weight: 600; width: 140px; vertical-align: top;">Date & Time</td>
+                <td style="padding: 6px 0;">${webinarDate}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; font-weight: 600; vertical-align: top;">Duration</td>
+                <td style="padding: 6px 0;">${webinar.durationMinutes || 60} minutes</td>
+              </tr>
+              ${webinar.language ? `
+              <tr>
+                <td style="padding: 6px 0; font-weight: 600; vertical-align: top;">Language</td>
+                <td style="padding: 6px 0;">${webinar.language}</td>
+              </tr>` : ""}
+              ${webinar.speakerName ? `
+              <tr>
+                <td style="padding: 6px 0; font-weight: 600; vertical-align: top;">Speaker</td>
+                <td style="padding: 6px 0;">${webinar.speakerName}</td>
+              </tr>` : ""}
+              ${isPaid ? `
+              <tr>
+                <td style="padding: 6px 0; font-weight: 600; vertical-align: top;">Amount Paid</td>
+                <td style="padding: 6px 0; color: #10b981; font-weight: 700;">&#8377;${webinar.price}</td>
+              </tr>` : `
+              <tr>
+                <td style="padding: 6px 0; font-weight: 600; vertical-align: top;">Ticket</td>
+                <td style="padding: 6px 0; color: #10b981; font-weight: 700;">Free</td>
+              </tr>`}
+              ${razorpay_payment_id ? `
+              <tr>
+                <td style="padding: 6px 0; font-weight: 600; vertical-align: top;">Payment ID</td>
+                <td style="padding: 6px 0; font-size: 12px; color: #6b7280;">${razorpay_payment_id}</td>
+              </tr>` : ""}
+            </table>
+          </div>
+
+          ${webinar.meetingLink ? `
+          <div style="text-align: center; margin-bottom: 20px;">
+            <a href="${webinar.meetingLink}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #6574e9, #4f5cd4); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">
+              Join Webinar
+            </a>
+            <p style="font-size: 12px; color: #9ca3af; margin-top: 8px;">This link will be active at the scheduled time</p>
+          </div>` : ""}
+
+          <div style="text-align: center; margin-bottom: 20px;">
+            <a href="${webinarPageLink}" style="display: inline-block; padding: 10px 24px; background: #f3f4f6; color: #374151; text-decoration: none; border-radius: 8px; font-weight: 500; font-size: 13px; border: 1px solid #e5e7eb;">
+              View Webinar Details
+            </a>
+          </div>
+
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+
+          <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+            This is an automated confirmation from <strong>Enrollify</strong> on behalf of <strong>${orgName}</strong>.<br/>
+            If you did not register for this webinar, please ignore this email.
+          </p>
+        </div>
+      </div>
     `
   });
 
